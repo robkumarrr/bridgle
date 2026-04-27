@@ -1,0 +1,48 @@
+services:
+  bridgle-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bridgle-app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+      - /var/www/html/vendor
+      - /var/www/html/node_modules
+      - /var/www/html/public/build
+    environment:
+      APP_NAME: Bridgle
+      APP_ENV: local
+      APP_DEBUG: true
+      APP_URL: http://localhost
+      DB_CONNECTION: pgsql
+      DB_HOST: bridgle-db
+      DB_PORT: 5432
+      DB_DATABASE: bridgle_db
+      DB_USERNAME: bridgle
+      DB_PASSWORD: secret
+    ports:
+      - "9000:9000"
+    depends_on:
+      - bridgle-db
+
+  bridgle-db:
+    image: postgres:16
+    container_name: bridgle-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bridgle_db
+      POSTGRES_USER: bridgle
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - bridgle-db-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
+networks:
+  default:
+    name: bridgle-network
+
+volumes:
+  bridgle-db-data:
