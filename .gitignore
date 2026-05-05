@@ -1,0 +1,21 @@
+# Dependencies
+vendor/
+node_modules/
+
+# Environment
+.env
+.env.backup
+
+# Mac
+.DS_Store
+
+# PHPStorm
+.idea/
+
+# Laravel
+storage/logs/*
+bootstrap/cache/*
+public/build/
+
+# Docker
+docker-compose.prod.yml
