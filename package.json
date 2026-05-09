@@ -49,6 +49,9 @@
         "vue-sonner": "^2.0.0",
         "vue-input-otp": "^0.3.2"
     },
+    "pnpm": {
+        "onlyBuiltDependencies": ["unrs-resolver", "vue-demi"]
+    },
     "optionalDependencies": {
         "@rollup/rollup-linux-x64-gnu": "4.9.5",
         "@rollup/rollup-win32-x64-msvc": "4.9.5",
