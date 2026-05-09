@@ -1,6 +1,7 @@
 # Dependencies
 vendor/
 node_modules/
+.pnpm-store/
 
 # Environment
 .env
@@ -19,3 +20,8 @@ public/build/
 
 # Docker
 docker-compose.prod.yml
+
+# Claude / local only
+/Bridgle/
+TASKS.md
+CLAUDE.md
