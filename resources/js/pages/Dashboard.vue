@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { watch } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import { useGame } from '@/composables/useGame';
 import GameBoard from '@/components/GameBoard.vue';
 import GameKeyboard from '@/components/GameKeyboard.vue';
 import StatsModal from '@/components/StatsModal.vue';
+import WordDefinition from '@/components/WordDefinition.vue';
+import type { GameResultPayload } from '@/composables/useGame';
 
 const {
     board,
@@ -21,13 +23,28 @@ const {
     newGame,
 } = useGame();
 
-// When a game ends, POST the result to the backend (fire and forget — no redirect)
-watch(lastResult, (result) => {
+// Grab the CSRF token Laravel embeds in the page meta tag
+function getCsrf(): string {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+}
+
+// When a game ends, fire-and-forget POST to store the result.
+// Using plain fetch instead of Inertia router to avoid any page navigation side effects.
+watch(lastResult, async (result: GameResultPayload | null) => {
     if (!result) return;
-    router.post(route('game-results.store'), result as Record<string, unknown>, {
-        preserveState: true,
-        preserveScroll: true,
-    });
+    try {
+        await fetch('/game-results', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrf(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify(result),
+        });
+    } catch {
+        // Silently ignore — stats are nice-to-have, don't interrupt the game
+    }
 });
 </script>
 
@@ -58,18 +75,27 @@ watch(lastResult, (result) => {
             />
         </div>
 
-        <!-- Play again button (shown on win/lose) -->
+        <!-- Post-game: definition + actions -->
         <Transition name="fade">
-            <div v-if="gameState !== 'playing'" class="flex flex-col items-center gap-2">
-                <StatsModal />
-                <button
-                    @click="newGame"
-                    class="px-6 py-2.5 rounded-lg bg-primary text-primary-foreground
-                           font-semibold text-sm hover:opacity-90 active:scale-95
-                           transition-all duration-150"
-                >
-                    Play again
-                </button>
+            <div v-if="gameState !== 'playing'" class="flex flex-col items-center gap-3 w-full max-w-sm px-4">
+                <!-- Word definition — fetched once, cached forever server-side -->
+                <WordDefinition
+                    v-if="lastResult"
+                    :word="lastResult.word"
+                    :key="lastResult.word"
+                />
+
+                <div class="flex items-center gap-2 w-full justify-center pt-1">
+                    <StatsModal />
+                    <button
+                        @click="newGame"
+                        class="px-6 py-2.5 rounded-lg bg-primary text-primary-foreground
+                               font-semibold text-sm hover:opacity-90 active:scale-95
+                               transition-all duration-150 cursor-pointer"
+                    >
+                        Play again
+                    </button>
+                </div>
             </div>
         </Transition>
 
