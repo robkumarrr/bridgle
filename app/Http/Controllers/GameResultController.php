@@ -2,10 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\GameResult;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Inertia\Inertia;
 
 class GameResultController extends Controller
 {
@@ -30,7 +28,7 @@ class GameResultController extends Controller
 
         Auth::user()->gameResults()->create($validated);
 
-        return back();
+        return response()->noContent(); // 204 — fetch-friendly, no redirect
     }
 
     /**

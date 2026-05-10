@@ -1,6 +1,17 @@
 // Bridgle word lists — sourced from wordfreq English corpus
+
+// Words that will never appear as an answer — offensive, slurs, or inappropriate
+const BLOCKED_ANSWERS = new Set([
+  // Sexual violence
+  'raped','rapes','raper','rapey',
+  // Explicit profanity / strong slurs
+  'fucks','cunts','cunty','twats','nigga',
+  // Sexual content inappropriate as a game target
+  'whore','pussy','dicks','prick','cocks',
+]);
+
 // ANSWERS: common words chosen as daily targets
-export const ANSWERS: string[] = [
+const RAW_ANSWERS: string[] = [
   'aaron','abbey','about','above','abuse','acids','acres','acted','actor','acute',
   'adams','adapt','added','admin','admit','adopt','adore','adult','after','again',
   'agent','aging','agree','ahead','ahmed','aided','aimed','aired','aisle','alarm',
@@ -166,6 +177,8 @@ export const ANSWERS: string[] = [
   'wrong','wrote','yacht','yahoo','yards','years','yemen','yield','young','youre',
   'yours','youth','zones',
 ];
+
+export const ANSWERS: string[] = RAW_ANSWERS.filter(w => !BLOCKED_ANSWERS.has(w));
 
 // VALID_GUESSES: accepted guesses but never chosen as the answer
 export const VALID_GUESSES: string[] = [

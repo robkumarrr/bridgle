@@ -74,6 +74,8 @@ export function useGame() {
     const currentRow = ref<number>(0);
     const gameState = ref<GameState>('playing');
     const letterStates = ref<Record<string, TileState>>({});
+    // Increments on every newGame() — used as :key on GameBoard to trigger remount animation
+    const boardKey = ref<number>(0);
     const message = ref<string>('');
     const shakingRow = ref<number | null>(null);
 
@@ -249,10 +251,12 @@ export function useGame() {
         invalidGuessCount.value = 0;
         letterFrequency.value = {};
         lastResult.value = null;
+        boardKey.value++; // triggers GameBoard remount → raindrop animation
     }
 
     return {
         board,
+        boardKey,
         currentRow,
         gameState,
         letterStates,

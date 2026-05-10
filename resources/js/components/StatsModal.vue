@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref } from 'vue';
 import { X, BarChart2 } from 'lucide-vue-next';
 
 interface Stats {
@@ -43,8 +43,6 @@ function openModal() {
     fetchStats();
 }
 
-// Auto-open after a game ends (parent mounts this component only when gameState !== 'playing')
-onMounted(() => openModal());
 
 function formatTime(seconds: number | null): string {
     if (!seconds) return '—';
