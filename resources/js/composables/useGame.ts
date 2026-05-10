@@ -11,6 +11,17 @@ export interface Tile {
     state: TileState;
 }
 
+export interface GameResultPayload {
+    word: string;
+    won: boolean;
+    attempts: number;
+    green_count: number;
+    yellow_count: number;
+    time_seconds: number | null;
+    guess_times: number[];
+    guesses: string[];
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const WORD_LENGTH = 5;
@@ -81,6 +92,17 @@ export function useGame() {
     const message = ref<string>('');
     const shakingRow = ref<number | null>(null);
 
+    // ── Timing & stat tracking ────────────────────────────────────────────────
+
+    // Timestamp (ms) of the first letter typed this game
+    const gameStartTime = ref<number | null>(null);
+    // Timestamp of each guess submission (ms since game start)
+    const guessTimes = ref<number[]>([]);
+    // The actual guess words submitted
+    const submittedGuesses = ref<string[]>([]);
+    // The final result payload, set on win/lose
+    const lastResult = ref<GameResultPayload | null>(null);
+
     // ── Derived ──────────────────────────────────────────────────────────────
 
     /** Letters typed so far in the current row */
@@ -114,10 +136,41 @@ export function useGame() {
         }
     }
 
+    function buildResultPayload(won: boolean, attempts: number, allStates: TileState[][]): GameResultPayload {
+        const now = Date.now();
+        const timeSeconds = gameStartTime.value
+            ? Math.round((now - gameStartTime.value) / 1000)
+            : null;
+
+        let greenCount = 0;
+        let yellowCount = 0;
+        for (const rowStates of allStates) {
+            for (const s of rowStates) {
+                if (s === 'correct') greenCount++;
+                else if (s === 'present') yellowCount++;
+            }
+        }
+
+        return {
+            word: answer.value,
+            won,
+            attempts,
+            green_count: greenCount,
+            yellow_count: yellowCount,
+            time_seconds: timeSeconds,
+            guess_times: [...guessTimes.value],
+            guesses: [...submittedGuesses.value],
+        };
+    }
+
     // ── Actions ───────────────────────────────────────────────────────────────
 
     function addLetter(letter: string) {
         if (!isPlaying.value) return;
+        // Start the clock on first letter typed
+        if (gameStartTime.value === null) {
+            gameStartTime.value = Date.now();
+        }
         const row = board.value[currentRow.value];
         const emptyIdx = row.findIndex(t => t.letter === '');
         if (emptyIdx === -1) return; // row is full
@@ -128,7 +181,6 @@ export function useGame() {
     function removeLetter() {
         if (!isPlaying.value) return;
         const row = board.value[currentRow.value];
-        // Find last filled tile
         for (let i = WORD_LENGTH - 1; i >= 0; i--) {
             if (row[i].letter !== '') {
                 row[i].letter = '';
@@ -155,6 +207,12 @@ export function useGame() {
             return;
         }
 
+        // Record guess time (seconds since game started)
+        if (gameStartTime.value !== null) {
+            guessTimes.value.push(Math.round((Date.now() - gameStartTime.value) / 1000));
+        }
+        submittedGuesses.value.push(guess);
+
         // Score the guess
         const states = scoreGuess(guess, answer.value);
         const row = board.value[currentRow.value];
@@ -165,12 +223,18 @@ export function useGame() {
 
         updateLetterStates(guess, states);
 
+        const attemptNumber = currentRow.value + 1;
+
         if (guess === answer.value) {
             gameState.value = 'won';
+            const allStates = board.value.slice(0, attemptNumber).map(r => r.map(t => t.state));
+            lastResult.value = buildResultPayload(true, attemptNumber, allStates);
             const msgs = ['Genius!', 'Magnificent!', 'Impressive!', 'Splendid!', 'Great!', 'Phew!'];
             showMessage(msgs[currentRow.value] ?? 'Nice!', 3000);
         } else if (currentRow.value === MAX_GUESSES - 1) {
             gameState.value = 'lost';
+            const allStates = board.value.map(r => r.map(t => t.state));
+            lastResult.value = buildResultPayload(false, MAX_GUESSES, allStates);
             showMessage(answer.value.toUpperCase(), 5000);
         }
 
@@ -187,6 +251,10 @@ export function useGame() {
         letterStates.value = {};
         message.value = '';
         shakingRow.value = null;
+        gameStartTime.value = null;
+        guessTimes.value = [];
+        submittedGuesses.value = [];
+        lastResult.value = null;
     }
 
     return {
@@ -197,6 +265,7 @@ export function useGame() {
         letterStates,
         message,
         shakingRow,
+        lastResult,
         // Derived
         currentGuess,
         isPlaying,

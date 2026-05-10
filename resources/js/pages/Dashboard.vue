@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { watch } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
 import { useGame } from '@/composables/useGame';
 import GameBoard from '@/components/GameBoard.vue';
 import GameKeyboard from '@/components/GameKeyboard.vue';
+import StatsModal from '@/components/StatsModal.vue';
 
 const {
     board,
@@ -11,12 +13,22 @@ const {
     letterStates,
     message,
     shakingRow,
+    lastResult,
     isPlaying,
     addLetter,
     removeLetter,
     submitGuess,
     newGame,
 } = useGame();
+
+// When a game ends, POST the result to the backend (fire and forget — no redirect)
+watch(lastResult, (result) => {
+    if (!result) return;
+    router.post(route('game-results.store'), result as Record<string, unknown>, {
+        preserveState: true,
+        preserveScroll: true,
+    });
+});
 </script>
 
 <template>
@@ -49,6 +61,7 @@ const {
         <!-- Play again button (shown on win/lose) -->
         <Transition name="fade">
             <div v-if="gameState !== 'playing'" class="flex flex-col items-center gap-2">
+                <StatsModal />
                 <button
                     @click="newGame"
                     class="px-6 py-2.5 rounded-lg bg-primary text-primary-foreground
