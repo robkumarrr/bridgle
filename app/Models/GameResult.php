@@ -16,13 +16,18 @@ class GameResult extends Model
         'yellow_count',
         'time_seconds',
         'guess_times',
+        'guess_intervals',
         'guesses',
+        'invalid_guesses',
+        'letter_frequency',
     ];
 
     protected $casts = [
-        'won'         => 'boolean',
-        'guess_times' => 'array',
-        'guesses'     => 'array',
+        'won'              => 'boolean',
+        'guess_times'      => 'array',
+        'guess_intervals'  => 'array',
+        'guesses'          => 'array',
+        'letter_frequency' => 'array',
     ];
 
     public function user(): BelongsTo

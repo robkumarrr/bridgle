@@ -11,6 +11,10 @@ interface Stats {
     best_streak: number;
     avg_attempts: number | null;
     avg_time: number | null;
+    avg_guess_interval: number | null;
+    total_invalid: number;
+    top_letters: Record<string, number>;
+    top_opener: string | null;
     distribution: Record<number, number>;
 }
 
@@ -22,9 +26,13 @@ async function fetchStats() {
     loading.value = true;
     try {
         const res = await fetch('/stats', {
-            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
         });
-        stats.value = await res.json();
+        const data = await res.json();
+        stats.value = data.total > 0 ? data : null;
     } finally {
         loading.value = false;
     }
@@ -35,10 +43,8 @@ function openModal() {
     fetchStats();
 }
 
-// Auto-open when mounted (called right after game ends)
-onMounted(() => {
-    openModal();
-});
+// Auto-open after a game ends (parent mounts this component only when gameState !== 'playing')
+onMounted(() => openModal());
 
 function formatTime(seconds: number | null): string {
     if (!seconds) return '—';
@@ -47,44 +53,44 @@ function formatTime(seconds: number | null): string {
     return m > 0 ? `${m}m ${s}s` : `${s}s`;
 }
 
-// Max value in distribution for scaling bar widths
 function maxDist(dist: Record<number, number>): number {
     return Math.max(1, ...Object.values(dist));
 }
 </script>
 
 <template>
-    <!-- Trigger (also auto-opens on mount after a game ends) -->
     <button
         @click="openModal"
         class="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border
-               text-sm font-medium hover:bg-accent transition-colors"
+               text-sm font-medium cursor-pointer hover:bg-accent transition-colors"
     >
         <BarChart2 class="w-4 h-4" />
         Stats
     </button>
 
-    <!-- Modal overlay -->
     <Transition name="modal">
         <div
             v-if="open"
             class="fixed inset-0 z-50 flex items-center justify-center p-4"
-            @click.self="open = false"
         >
             <!-- Backdrop -->
-            <div class="absolute inset-0 bg-black/50" @click="open = false" />
+            <div
+                class="absolute inset-0 bg-black/50 cursor-pointer"
+                @click="open = false"
+            />
 
             <!-- Panel -->
-            <div class="relative z-10 w-full max-w-sm rounded-xl bg-background border border-border shadow-xl p-6">
-                <!-- Header -->
+            <div class="relative z-10 w-full max-w-sm rounded-xl bg-background border border-border shadow-xl p-6 max-h-[90dvh] overflow-y-auto">
                 <div class="flex items-center justify-between mb-5">
                     <h2 class="text-base font-semibold tracking-wide uppercase">Statistics</h2>
-                    <button @click="open = false" class="text-muted-foreground hover:text-foreground transition-colors">
+                    <button
+                        @click="open = false"
+                        class="cursor-pointer text-muted-foreground hover:text-foreground transition-colors p-1 rounded"
+                    >
                         <X class="w-5 h-5" />
                     </button>
                 </div>
 
-                <!-- Loading -->
                 <div v-if="loading" class="flex justify-center py-8 text-muted-foreground text-sm">
                     Loading…
                 </div>
@@ -97,8 +103,8 @@ function maxDist(dist: Record<number, number>): number {
                             <div class="text-xs text-muted-foreground leading-tight mt-0.5">Played</div>
                         </div>
                         <div>
-                            <div class="text-2xl font-bold">{{ stats.win_rate }}</div>
-                            <div class="text-xs text-muted-foreground leading-tight mt-0.5">Win %</div>
+                            <div class="text-2xl font-bold">{{ stats.win_rate }}%</div>
+                            <div class="text-xs text-muted-foreground leading-tight mt-0.5">Win rate</div>
                         </div>
                         <div>
                             <div class="text-2xl font-bold">{{ stats.streak }}</div>
@@ -112,24 +118,17 @@ function maxDist(dist: Record<number, number>): number {
 
                     <!-- Guess distribution -->
                     <div class="mb-5">
-                        <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-                            Guess Distribution
-                        </h3>
+                        <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Guess Distribution</h3>
                         <div class="space-y-1.5">
-                            <div
-                                v-for="n in 6"
-                                :key="n"
-                                class="flex items-center gap-2 text-sm"
-                            >
+                            <div v-for="n in 6" :key="n" class="flex items-center gap-2 text-sm">
                                 <span class="w-3 text-right font-mono text-muted-foreground">{{ n }}</span>
-                                <div class="flex-1 flex items-center gap-1.5">
+                                <div class="flex-1 flex items-center">
                                     <div
-                                        class="h-5 rounded-sm flex items-center justify-end px-1.5
-                                               text-xs font-bold text-white transition-all duration-500"
+                                        class="h-5 rounded-sm flex items-center justify-end px-1.5 text-xs font-bold text-white transition-all duration-500"
                                         :class="stats.distribution[n] > 0 ? 'bg-primary' : 'bg-muted'"
                                         :style="{
                                             width: stats.distribution[n]
-                                                ? `${Math.max(8, (stats.distribution[n] / maxDist(stats.distribution)) * 100)}%`
+                                                ? `${Math.max(12, (stats.distribution[n] / maxDist(stats.distribution)) * 100)}%`
                                                 : '1.5rem'
                                         }"
                                     >
@@ -140,8 +139,8 @@ function maxDist(dist: Record<number, number>): number {
                         </div>
                     </div>
 
-                    <!-- Extra stats -->
-                    <div class="flex justify-around text-center border-t border-border pt-4">
+                    <!-- Timing row -->
+                    <div class="grid grid-cols-3 gap-3 text-center border-t border-border pt-4 mb-4">
                         <div>
                             <div class="text-lg font-bold">{{ stats.avg_attempts ?? '—' }}</div>
                             <div class="text-xs text-muted-foreground">Avg guesses</div>
@@ -150,11 +149,42 @@ function maxDist(dist: Record<number, number>): number {
                             <div class="text-lg font-bold">{{ formatTime(stats.avg_time) }}</div>
                             <div class="text-xs text-muted-foreground">Avg time</div>
                         </div>
+                        <div>
+                            <div class="text-lg font-bold">{{ formatTime(stats.avg_guess_interval) }}</div>
+                            <div class="text-xs text-muted-foreground">Avg per guess</div>
+                        </div>
+                    </div>
+
+                    <!-- Misc row -->
+                    <div class="grid grid-cols-2 gap-3 text-center border-t border-border pt-4 mb-4">
+                        <div>
+                            <div class="text-lg font-bold">{{ stats.total_invalid }}</div>
+                            <div class="text-xs text-muted-foreground">Invalid guesses ever</div>
+                        </div>
+                        <div>
+                            <div class="text-lg font-bold uppercase">{{ stats.top_opener ?? '—' }}</div>
+                            <div class="text-xs text-muted-foreground">Fav opener</div>
+                        </div>
+                    </div>
+
+                    <!-- Top letters -->
+                    <div v-if="Object.keys(stats.top_letters).length" class="border-t border-border pt-4">
+                        <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Most Used Letters</h3>
+                        <div class="flex gap-2 justify-center flex-wrap">
+                            <div
+                                v-for="(count, letter) in stats.top_letters"
+                                :key="letter"
+                                class="flex flex-col items-center bg-secondary rounded px-2.5 py-1.5 min-w-[2.5rem]"
+                            >
+                                <span class="text-base font-bold uppercase">{{ letter }}</span>
+                                <span class="text-xs text-muted-foreground">{{ count }}</span>
+                            </div>
+                        </div>
                     </div>
                 </template>
 
                 <div v-else class="text-center text-sm text-muted-foreground py-6">
-                    No games played yet.
+                    No games played yet — finish one first!
                 </div>
             </div>
         </div>
@@ -169,13 +199,5 @@ function maxDist(dist: Record<number, number>): number {
 .modal-enter-from,
 .modal-leave-to {
     opacity: 0;
-}
-.modal-enter-active .relative,
-.modal-leave-active .relative {
-    transition: transform 0.2s ease;
-}
-.modal-enter-from .relative,
-.modal-leave-to .relative {
-    transform: scale(0.95);
 }
 </style>

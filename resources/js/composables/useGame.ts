@@ -18,8 +18,11 @@ export interface GameResultPayload {
     green_count: number;
     yellow_count: number;
     time_seconds: number | null;
-    guess_times: number[];
-    guesses: string[];
+    guess_times: number[];        // cumulative seconds from first letter at each submit
+    guess_intervals: number[];    // seconds between each consecutive guess
+    guesses: string[];            // actual words guessed in order
+    invalid_guesses: number;      // times "not in word list" was shown
+    letter_frequency: Record<string, number>; // {a:3, b:1, ...} across all valid guesses
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -27,7 +30,6 @@ export interface GameResultPayload {
 const WORD_LENGTH = 5;
 const MAX_GUESSES = 6;
 
-// All words accepted as valid guesses (answers + extra)
 const ALL_VALID = new Set([...ANSWERS, ...VALID_GUESSES]);
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -36,30 +38,22 @@ function pickRandom(): string {
     return ANSWERS[Math.floor(Math.random() * ANSWERS.length)];
 }
 
-/**
- * Score a guess against the answer.
- * Handles duplicate letters correctly — greens are locked first,
- * then yellows consume remaining unmatched letters in the answer.
- */
 function scoreGuess(guess: string, answer: string): TileState[] {
     const result: TileState[] = Array(WORD_LENGTH).fill('absent');
     const answerPool = answer.split('');
 
-    // Pass 1: mark greens and remove them from the pool
     for (let i = 0; i < WORD_LENGTH; i++) {
         if (guess[i] === answer[i]) {
             result[i] = 'correct';
-            answerPool[i] = ''; // consumed
+            answerPool[i] = '';
         }
     }
-
-    // Pass 2: mark yellows from remaining pool letters
     for (let i = 0; i < WORD_LENGTH; i++) {
         if (result[i] === 'correct') continue;
         const idx = answerPool.indexOf(guess[i]);
         if (idx !== -1) {
             result[i] = 'present';
-            answerPool[idx] = ''; // consume so it's not double-counted
+            answerPool[idx] = '';
         }
     }
 
@@ -69,43 +63,31 @@ function scoreGuess(guess: string, answer: string): TileState[] {
 // ─── Composable ───────────────────────────────────────────────────────────────
 
 export function useGame() {
-    // The secret word for this round
     const answer = ref<string>(pickRandom());
 
-    // 6 rows, each with 5 tiles
     const board = ref<Tile[][]>(
         Array.from({ length: MAX_GUESSES }, () =>
             Array.from({ length: WORD_LENGTH }, () => ({ letter: '', state: 'empty' as TileState }))
         )
     );
 
-    // Which row the player is currently typing into
     const currentRow = ref<number>(0);
-
-    // Overall game state
     const gameState = ref<GameState>('playing');
-
-    // Best known state for each letter (used to color the keyboard)
     const letterStates = ref<Record<string, TileState>>({});
-
-    // Toast / shake feedback message
     const message = ref<string>('');
     const shakingRow = ref<number | null>(null);
 
-    // ── Timing & stat tracking ────────────────────────────────────────────────
+    // ── Stat tracking ─────────────────────────────────────────────────────────
 
-    // Timestamp (ms) of the first letter typed this game
     const gameStartTime = ref<number | null>(null);
-    // Timestamp of each guess submission (ms since game start)
-    const guessTimes = ref<number[]>([]);
-    // The actual guess words submitted
+    const guessTimes = ref<number[]>([]);         // cumulative seconds at each guess
     const submittedGuesses = ref<string[]>([]);
-    // The final result payload, set on win/lose
+    const invalidGuessCount = ref<number>(0);     // "not in word list" hits
+    const letterFrequency = ref<Record<string, number>>({}); // letters used across all guesses
     const lastResult = ref<GameResultPayload | null>(null);
 
-    // ── Derived ──────────────────────────────────────────────────────────────
+    // ── Derived ───────────────────────────────────────────────────────────────
 
-    /** Letters typed so far in the current row */
     const currentGuess = computed<string>(() =>
         board.value[currentRow.value]?.map(t => t.letter).join('') ?? ''
     );
@@ -125,7 +107,6 @@ export function useGame() {
     }
 
     function updateLetterStates(guess: string, states: TileState[]) {
-        // Priority: correct > present > absent — never downgrade a letter's state
         const priority: Record<TileState, number> = { correct: 3, present: 2, absent: 1, filled: 0, empty: 0 };
         for (let i = 0; i < WORD_LENGTH; i++) {
             const letter = guess[i];
@@ -136,11 +117,21 @@ export function useGame() {
         }
     }
 
+    function trackLetterFrequency(guess: string) {
+        for (const letter of guess) {
+            letterFrequency.value[letter] = (letterFrequency.value[letter] ?? 0) + 1;
+        }
+    }
+
     function buildResultPayload(won: boolean, attempts: number, allStates: TileState[][]): GameResultPayload {
-        const now = Date.now();
         const timeSeconds = gameStartTime.value
-            ? Math.round((now - gameStartTime.value) / 1000)
+            ? Math.round((Date.now() - gameStartTime.value) / 1000)
             : null;
+
+        // Derive intervals: time between each consecutive guess submission
+        const intervals: number[] = guessTimes.value.map((t, i) =>
+            i === 0 ? t : t - guessTimes.value[i - 1]
+        );
 
         let greenCount = 0;
         let yellowCount = 0;
@@ -159,7 +150,10 @@ export function useGame() {
             yellow_count: yellowCount,
             time_seconds: timeSeconds,
             guess_times: [...guessTimes.value],
+            guess_intervals: intervals,
             guesses: [...submittedGuesses.value],
+            invalid_guesses: invalidGuessCount.value,
+            letter_frequency: { ...letterFrequency.value },
         };
     }
 
@@ -167,13 +161,12 @@ export function useGame() {
 
     function addLetter(letter: string) {
         if (!isPlaying.value) return;
-        // Start the clock on first letter typed
         if (gameStartTime.value === null) {
             gameStartTime.value = Date.now();
         }
         const row = board.value[currentRow.value];
         const emptyIdx = row.findIndex(t => t.letter === '');
-        if (emptyIdx === -1) return; // row is full
+        if (emptyIdx === -1) return;
         row[emptyIdx].letter = letter.toLowerCase();
         row[emptyIdx].state = 'filled';
     }
@@ -202,21 +195,20 @@ export function useGame() {
         }
 
         if (!ALL_VALID.has(guess)) {
+            invalidGuessCount.value++;
             showMessage('Not in word list');
             shakeRow(currentRow.value);
             return;
         }
 
-        // Record guess time (seconds since game started)
         if (gameStartTime.value !== null) {
             guessTimes.value.push(Math.round((Date.now() - gameStartTime.value) / 1000));
         }
         submittedGuesses.value.push(guess);
+        trackLetterFrequency(guess);
 
-        // Score the guess
         const states = scoreGuess(guess, answer.value);
         const row = board.value[currentRow.value];
-
         for (let i = 0; i < WORD_LENGTH; i++) {
             row[i].state = states[i];
         }
@@ -254,11 +246,12 @@ export function useGame() {
         gameStartTime.value = null;
         guessTimes.value = [];
         submittedGuesses.value = [];
+        invalidGuessCount.value = 0;
+        letterFrequency.value = {};
         lastResult.value = null;
     }
 
     return {
-        // State
         board,
         currentRow,
         gameState,
@@ -266,10 +259,8 @@ export function useGame() {
         message,
         shakingRow,
         lastResult,
-        // Derived
         currentGuess,
         isPlaying,
-        // Actions
         addLetter,
         removeLetter,
         submitGuess,
