@@ -38,7 +38,7 @@ function pickRandom(): string {
     return ANSWERS[Math.floor(Math.random() * ANSWERS.length)];
 }
 
-function scoreGuess(guess: string, answer: string): TileState[] {
+export function scoreGuess(guess: string, answer: string): TileState[] {
     const result: TileState[] = Array(WORD_LENGTH).fill('absent');
     const answerPool = answer.split('');
 

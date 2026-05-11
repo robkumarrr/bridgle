@@ -12,10 +12,18 @@ class DictionaryService
     private const CACHE_PREFIX = 'dict:v1:';
 
     /**
+     * Sentinel stored in cache for words not found in the dictionary.
+     * Needed because Cache::rememberForever cannot distinguish a cached null
+     * from a cache miss, so we use this string as a stand-in for "not found".
+     */
+    private const NOT_FOUND = '__not_found__';
+
+    /**
      * Look up a word's definition.
      *
      * Cached forever — each unique word hits the external API exactly once,
-     * ever, regardless of how many users play it.
+     * ever, regardless of how many users play it. Words not in the dictionary
+     * are also cached (via a sentinel) so we never retry them.
      *
      * Returns a structured array or null if the word isn't in the dictionary.
      */
@@ -24,10 +32,12 @@ class DictionaryService
         $word = strtolower(trim($word));
         $cacheKey = self::CACHE_PREFIX . $word;
 
-        // rememberForever: if it's in cache, return it. If not, fetch once and store it.
-        return Cache::rememberForever($cacheKey, function () use ($word) {
-            return $this->fetchFromApi($word);
+        $cached = Cache::rememberForever($cacheKey, function () use ($word) {
+            $result = $this->fetchFromApi($word);
+            return $result ?? self::NOT_FOUND;
         });
+
+        return $cached === self::NOT_FOUND ? null : $cached;
     }
 
     private function fetchFromApi(string $word): ?array
