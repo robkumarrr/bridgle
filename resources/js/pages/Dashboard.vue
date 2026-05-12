@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
 import { Head } from '@inertiajs/vue3';
-import { useGame } from '@/composables/useGame';
+import { BarChart2 } from 'lucide-vue-next';
+import { ref, watch, onMounted } from 'vue';
+import EndGameModal from '@/components/EndGameModal.vue';
 import GameBoard from '@/components/GameBoard.vue';
 import GameKeyboard from '@/components/GameKeyboard.vue';
-import EndGameModal from '@/components/EndGameModal.vue';
-import { BarChart2 } from 'lucide-vue-next';
+import { useGame } from '@/composables/useGame';
 import type { GameResultPayload } from '@/composables/useGame';
 
 const {
@@ -18,13 +18,18 @@ const {
     shakingRow,
     lastResult,
     isPlaying,
+    initialising,
     addLetter,
     removeLetter,
     submitGuess,
     newGame,
+    initGame,
 } = useGame();
 
-// The modal waits for the last row's flip animation to finish before appearing.
+// ── Load / restore saved game on mount ────────────────────────────────────────
+onMounted(() => initGame());
+
+// ── End-game modal timing ─────────────────────────────────────────────────────
 // Last tile flips at: col 4 × 300ms stagger + 500ms animation = 1700ms.
 // We wait 1900ms to give it a little breath before fading in.
 const FLIP_DURATION_MS = 1900;
@@ -34,7 +39,10 @@ let endTimer: ReturnType<typeof setTimeout> | null = null;
 watch(gameState, (val) => {
     if (val === 'playing') {
         modalOpen.value = false;
-        if (endTimer) clearTimeout(endTimer);
+
+        if (endTimer) {
+clearTimeout(endTimer);
+}
     } else {
         endTimer = setTimeout(() => {
             modalOpen.value = true;
@@ -42,13 +50,43 @@ watch(gameState, (val) => {
     }
 });
 
-// CSRF + fire-and-forget result save
+// On restore from DB, if game is already won/lost show modal immediately
+watch(initialising, (loading) => {
+    if (!loading && gameState.value !== 'playing') {
+        modalOpen.value = true;
+    }
+});
+
+// ── Confirm before starting a new game ────────────────────────────────────────
+const confirmOpen = ref(false);
+
+function requestNewGame() {
+    if (gameState.value !== 'playing') {
+        // Game already over — no need to confirm
+        handleNewGame();
+
+        return;
+    }
+
+    confirmOpen.value = true;
+}
+
+async function handleNewGame() {
+    confirmOpen.value = false;
+    modalOpen.value = false;
+    await newGame();
+}
+
+// ── CSRF + fire-and-forget result save ────────────────────────────────────────
 function getCsrf(): string {
     return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 }
 
 watch(lastResult, async (result: GameResultPayload | null) => {
-    if (!result) return;
+    if (!result) {
+return;
+}
+
     try {
         await fetch('/game-results', {
             method: 'POST',
@@ -95,7 +133,7 @@ watch(lastResult, async (result: GameResultPayload | null) => {
             </Transition>
         </div>
 
-        <!-- See results button — shows when game is over and modal is dismissed -->
+        <!-- See results + play again buttons (shown after game ends, modal dismissed) -->
         <div class="flex items-center justify-center min-h-[2.5rem]">
             <Transition name="fade-up">
                 <div
@@ -111,7 +149,7 @@ watch(lastResult, async (result: GameResultPayload | null) => {
                         See results
                     </button>
                     <button
-                        @click="newGame"
+                        @click="requestNewGame"
                         class="px-4 py-2 rounded-lg bg-primary text-primary-foreground
                                text-sm font-semibold cursor-pointer hover:opacity-90
                                active:scale-95 transition-all duration-150"
@@ -130,8 +168,44 @@ watch(lastResult, async (result: GameResultPayload | null) => {
             :game-state="gameState as 'won' | 'lost'"
             :attempt-count="currentRow"
             @close="modalOpen = false"
-            @play-again="newGame(); modalOpen = false"
+            @play-again="requestNewGame"
         />
+
+        <!-- Confirm new game dialog -->
+        <Transition name="modal">
+            <div
+                v-if="confirmOpen"
+                class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                role="dialog"
+                aria-modal="true"
+            >
+                <div class="absolute inset-0 bg-black/50" @click="confirmOpen = false" />
+                <div class="relative z-10 w-full max-w-xs bg-background border border-border
+                            rounded-xl shadow-xl p-6 flex flex-col gap-4">
+                    <h2 class="text-base font-semibold">Abandon this game?</h2>
+                    <p class="text-sm text-muted-foreground leading-relaxed">
+                        You're in the middle of a game. Starting a new one will lose your progress.
+                    </p>
+                    <div class="flex gap-2 justify-end">
+                        <button
+                            @click="confirmOpen = false"
+                            class="px-4 py-2 rounded-lg border border-border text-sm
+                                   font-medium cursor-pointer hover:bg-accent transition-colors"
+                        >
+                            Keep playing
+                        </button>
+                        <button
+                            @click="handleNewGame"
+                            class="px-4 py-2 rounded-lg bg-destructive text-destructive-foreground
+                                   text-sm font-semibold cursor-pointer hover:opacity-90
+                                   active:scale-95 transition-all duration-150"
+                        >
+                            New game
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Transition>
 
         <!-- Keyboard -->
         <GameKeyboard
@@ -186,5 +260,15 @@ watch(lastResult, async (result: GameResultPayload | null) => {
 .board-flip-enter-from {
     opacity: 0;
     transform: rotateX(-20deg) scale(0.97);
+}
+
+/* Confirm dialog */
+.modal-enter-active,
+.modal-leave-active {
+    transition: opacity 0.2s ease;
+}
+.modal-enter-from,
+.modal-leave-to {
+    opacity: 0;
 }
 </style>

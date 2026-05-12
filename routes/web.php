@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActiveGameController;
 use App\Http\Controllers\DictionaryController;
 use App\Http\Controllers\GameResultController;
 use Illuminate\Support\Facades\RateLimiter;
@@ -25,6 +26,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dictionary/{word}', [DictionaryController::class, 'show'])
         ->middleware('throttle:dictionary')
         ->name('dictionary.show');
+
+    // Active game persistence
+    Route::get('active-game', [ActiveGameController::class, 'show'])->name('active-game.show');
+    Route::put('active-game', [ActiveGameController::class, 'store'])->name('active-game.store');
+    Route::delete('active-game', [ActiveGameController::class, 'destroy'])->name('active-game.destroy');
 });
 
 require __DIR__.'/settings.php';

@@ -15,6 +15,7 @@ class DictionaryServiceTest extends TestCase
     {
         parent::setUp();
         $this->service = new DictionaryService();
+        \Illuminate\Support\Facades\Cache::flush(); // prevent cross-test cache bleed
     }
 
     private function fakeApiResponse(string $word): array

@@ -13,7 +13,11 @@ class GameResultStatsTest extends TestCase
 
     private function createResult(User $user, array $attrs = []): GameResult
     {
-        return GameResult::create(array_merge([
+        // Extract created_at before mass-assignment since it's not in $fillable
+        $createdAt = $attrs['created_at'] ?? null;
+        unset($attrs['created_at']);
+
+        $result = GameResult::create(array_merge([
             'user_id'          => $user->id,
             'word'             => 'crane',
             'won'              => true,
@@ -27,6 +31,15 @@ class GameResultStatsTest extends TestCase
             'invalid_guesses'  => 0,
             'letter_frequency' => ['c' => 2, 'r' => 2, 'a' => 1],
         ], $attrs));
+
+        // Apply custom timestamp outside mass-assignment
+        if ($createdAt !== null) {
+            $result->timestamps = false;
+            $result->created_at = $createdAt;
+            $result->save();
+        }
+
+        return $result;
     }
 
     public function test_unauthenticated_request_is_redirected(): void

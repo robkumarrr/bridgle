@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -36,5 +37,10 @@ class User extends Authenticatable
     public function gameResults(): HasMany
     {
         return $this->hasMany(GameResult::class);
+    }
+
+    public function activeGame(): HasOne
+    {
+        return $this->hasOne(ActiveGame::class);
     }
 }

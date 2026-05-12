@@ -33,7 +33,7 @@ defineProps<{
                     : {}"
                 :aria-label="`${tile.letter || 'empty'}, ${tile.state}`"
             >
-                {{ tile.letter.toUpperCase() }}
+                {{ (tile.letter ?? '').toUpperCase() }}
             </div>
         </div>
     </div>

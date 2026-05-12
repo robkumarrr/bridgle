@@ -60,17 +60,22 @@ export function scoreGuess(guess: string, answer: string): TileState[] {
     return result;
 }
 
+function emptyBoard(): Tile[][] {
+    return Array.from({ length: MAX_GUESSES }, () =>
+        Array.from({ length: WORD_LENGTH }, () => ({ letter: '', state: 'empty' as TileState }))
+    );
+}
+
+function getCsrf(): string {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+}
+
 // ─── Composable ───────────────────────────────────────────────────────────────
 
 export function useGame() {
-    const answer = ref<string>(pickRandom());
+    const answer = ref<string>(pickRandom());  // overridden by initGame() on mount
 
-    const board = ref<Tile[][]>(
-        Array.from({ length: MAX_GUESSES }, () =>
-            Array.from({ length: WORD_LENGTH }, () => ({ letter: '', state: 'empty' as TileState }))
-        )
-    );
-
+    const board = ref<Tile[][]>(emptyBoard());
     const currentRow = ref<number>(0);
     const gameState = ref<GameState>('playing');
     const letterStates = ref<Record<string, TileState>>({});
@@ -78,14 +83,15 @@ export function useGame() {
     const boardKey = ref<number>(0);
     const message = ref<string>('');
     const shakingRow = ref<number | null>(null);
+    const initialising = ref<boolean>(true); // true until initGame() resolves
 
     // ── Stat tracking ─────────────────────────────────────────────────────────
 
     const gameStartTime = ref<number | null>(null);
-    const guessTimes = ref<number[]>([]);         // cumulative seconds at each guess
+    const guessTimes = ref<number[]>([]);
     const submittedGuesses = ref<string[]>([]);
-    const invalidGuessCount = ref<number>(0);     // "not in word list" hits
-    const letterFrequency = ref<Record<string, number>>({}); // letters used across all guesses
+    const invalidGuessCount = ref<number>(0);
+    const letterFrequency = ref<Record<string, number>>({});
     const lastResult = ref<GameResultPayload | null>(null);
 
     // ── Derived ───────────────────────────────────────────────────────────────
@@ -130,7 +136,6 @@ export function useGame() {
             ? Math.round((Date.now() - gameStartTime.value) / 1000)
             : null;
 
-        // Derive intervals: time between each consecutive guess submission
         const intervals: number[] = guessTimes.value.map((t, i) =>
             i === 0 ? t : t - guessTimes.value[i - 1]
         );
@@ -157,6 +162,104 @@ export function useGame() {
             invalid_guesses: invalidGuessCount.value,
             letter_frequency: { ...letterFrequency.value },
         };
+    }
+
+    // ── Persistence ───────────────────────────────────────────────────────────
+
+    async function saveGame() {
+        // Fire-and-forget — we never block the UI on a save
+        try {
+            await fetch('/active-game', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': getCsrf(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({
+                    word: answer.value,
+                    board: board.value,
+                    current_row: currentRow.value,
+                    game_state: gameState.value,
+                    letter_states: letterStates.value,
+                    game_start_time: gameStartTime.value,
+                    guess_times: guessTimes.value,
+                    guesses: submittedGuesses.value,
+                    invalid_guess_count: invalidGuessCount.value,
+                    letter_frequency: letterFrequency.value,
+                    last_result: lastResult.value,
+                }),
+            });
+        } catch {
+            // Silent — offline/flaky network shouldn't break the game
+        }
+    }
+
+    async function clearSavedGame() {
+        try {
+            await fetch('/active-game', {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': getCsrf(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+        } catch {
+            // Silent
+        }
+    }
+
+    /**
+     * Load any saved game from the API. If none exists, start a fresh game
+     * and immediately persist it so the word is locked to the DB.
+     * Call this once from Dashboard's onMounted.
+     */
+    async function initGame() {
+        initialising.value = true;
+        try {
+            const res = await fetch('/active-game', {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+
+            const saved = await res.json();
+
+            if (saved && saved.word) {
+                // Hydrate all state from the saved game.
+                // Normalise the board: coerce any null letters (possible from
+                // older saves or DB quirks) back to empty string so the template
+                // never crashes on .toUpperCase().
+                const normalisedBoard: Tile[][] = (saved.board as Tile[][]).map(row =>
+                    row.map(tile => ({
+                        letter: tile.letter ?? '',
+                        state:  tile.state  ?? 'empty',
+                    }))
+                );
+                answer.value        = saved.word;
+                board.value         = normalisedBoard;
+                currentRow.value    = saved.current_row;
+                gameState.value     = saved.game_state;
+                letterStates.value  = saved.letter_states ?? {};
+                gameStartTime.value = saved.game_start_time ?? null;
+                guessTimes.value    = saved.guess_times ?? [];
+                submittedGuesses.value  = saved.guesses ?? [];
+                invalidGuessCount.value = saved.invalid_guess_count ?? 0;
+                letterFrequency.value   = saved.letter_frequency ?? {};
+                lastResult.value        = saved.last_result ?? null;
+            } else {
+                // No saved game — pick a fresh word and save it immediately
+                answer.value = pickRandom();
+                board.value  = emptyBoard();
+                await saveGame();
+            }
+        } catch {
+            // API unavailable — fall back to a local game (won't persist)
+            if (!answer.value) answer.value = pickRandom();
+        } finally {
+            initialising.value = false;
+        }
     }
 
     // ── Actions ───────────────────────────────────────────────────────────────
@@ -233,25 +336,32 @@ export function useGame() {
         }
 
         currentRow.value++;
+
+        // Persist after every submitted guess (fire-and-forget)
+        saveGame();
     }
 
-    function newGame() {
+    async function newGame() {
+        // ── Reset state synchronously so the UI responds immediately ──────────
         answer.value = pickRandom();
-        board.value = Array.from({ length: MAX_GUESSES }, () =>
-            Array.from({ length: WORD_LENGTH }, () => ({ letter: '', state: 'empty' as TileState }))
-        );
-        currentRow.value = 0;
-        gameState.value = 'playing';
-        letterStates.value = {};
-        message.value = '';
-        shakingRow.value = null;
+        board.value  = emptyBoard();
+        currentRow.value    = 0;
+        gameState.value     = 'playing';
+        letterStates.value  = {};
+        message.value       = '';
+        shakingRow.value    = null;
         gameStartTime.value = null;
-        guessTimes.value = [];
-        submittedGuesses.value = [];
+        guessTimes.value    = [];
+        submittedGuesses.value  = [];
         invalidGuessCount.value = 0;
-        letterFrequency.value = {};
-        lastResult.value = null;
-        boardKey.value++; // triggers GameBoard remount → raindrop animation
+        letterFrequency.value   = {};
+        lastResult.value        = null;
+        boardKey.value++; // triggers GameBoard remount animation
+
+        // ── Async persistence (fire-and-forget is fine here) ──────────────────
+        // Delete the old game first, then lock in the new word
+        await clearSavedGame();
+        await saveGame();
     }
 
     return {
@@ -265,9 +375,11 @@ export function useGame() {
         lastResult,
         currentGuess,
         isPlaying,
+        initialising,
         addLetter,
         removeLetter,
         submitGuess,
         newGame,
+        initGame,
     };
 }
