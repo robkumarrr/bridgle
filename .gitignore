@@ -6,6 +6,8 @@ node_modules/
 # Environment
 .env
 .env.backup
+.env.production
+.env.*.local
 
 # Mac
 .DS_Store
@@ -13,10 +15,23 @@ node_modules/
 # PHPStorm
 .idea/
 
+# VS Code
+.vscode/
+
 # Laravel
 storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/*.key
 bootstrap/cache/*
 public/build/
+public/hot
+public/storage
+
+# PHPUnit
+.phpunit.result.cache
+.phpunit.cache/
 
 # Docker
 docker-compose.prod.yml
