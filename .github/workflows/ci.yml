@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # Spin up a real Postgres instance — same version as our stack.
+    # GitHub Actions runs this as a sidecar container accessible at localhost.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: bridgle_test
+          POSTGRES_USER: bridgle
+          POSTGRES_PASSWORD: secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bridgle -d bridgle_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── PHP ────────────────────────────────────────────────────────────────
+
+      - name: Set up PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: pdo, pdo_pgsql, zip
+          coverage: none   # faster — we're not measuring coverage here
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Prepare Laravel environment
+        run: |
+          cp .env.example .env
+          # Override the values that matter for CI
+          sed -i 's/^APP_KEY=.*//' .env
+          echo "APP_ENV=testing" >> .env
+          echo "DB_CONNECTION=pgsql" >> .env
+          echo "DB_HOST=127.0.0.1" >> .env
+          echo "DB_PORT=5432" >> .env
+          echo "DB_DATABASE=bridgle_test" >> .env
+          echo "DB_USERNAME=bridgle" >> .env
+          echo "DB_PASSWORD=secret" >> .env
+          php artisan key:generate
+
+      - name: Run migrations
+        run: php artisan migrate --force
+
+      - name: Run PHPUnit
+        run: php artisan test
+
+      # ── Node / Vitest ──────────────────────────────────────────────────────
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Vitest
+        run: pnpm run test --run   # --run = no watch mode, exit when done

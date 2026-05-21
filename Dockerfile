@@ -1,36 +1,44 @@
 FROM php:8.4-fpm
 
+# System deps for Postgres, zip, and git (composer needs git for some packages)
 RUN apt-get update && apt-get install -y \
     git \
     curl \
     libpq-dev \
     libzip-dev \
     zip \
-    unzip
+    unzip \
+    && docker-php-ext-install pdo pdo_pgsql zip \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Install Node 22 (LTS) via NodeSource, then install pnpm globally via npm.
+# We use npm here because it ships with Node — no install script needed.
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y nodejs
+    && apt-get install -y nodejs \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* \
+    && npm install -g pnpm
 
-RUN docker-php-ext-install pdo pdo_pgsql zip
-
+# Pull in Composer from its own official image rather than installing it manually.
+# This is the canonical pattern — keeps Composer version consistent and image lean.
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
+# Copy application source (respects .dockerignore — vendor/, node_modules/, .env excluded)
 COPY . .
 
+# PHP dependencies — no dev packages in prod, pre-generate class map for faster autoloading
 RUN composer install --no-dev --optimize-autoloader
 
+# Fix storage and cache permissions so php-fpm (running as www-data) can write to them
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-RUN curl -fsSL https://get.pnpm.io/install.sh | bash - \
-    && export PATH="/root/.local/share/pnpm:$PATH" \
-    && pnpm install
+# JS dependencies + build — output lands in public/build/
+# This is what nginx will serve as static assets
+RUN pnpm install --frozen-lockfile && pnpm run build
 
-RUN export PATH="/root/.local/share/pnpm:$PATH" \
-    && pnpm run build
-
+# Expose FastCGI port (only reachable within the Docker network — never published to the host)
 EXPOSE 9000
 
 CMD ["php-fpm"]

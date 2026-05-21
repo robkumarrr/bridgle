@@ -1,0 +1,48 @@
+# Dependencies — reinstalled inside the image by composer/pnpm
+vendor/
+node_modules/
+.pnpm-store/
+
+# Environment files — secrets must never bake into the image
+.env
+.env.*
+!.env.example
+
+# Built frontend assets — rebuilt inside the image by pnpm run build
+public/build/
+public/hot
+
+# Git
+.git/
+.gitignore
+
+# Docker files themselves (no need to copy into the image)
+.dockerignore
+docker-compose*.yml
+Dockerfile*
+
+# Editor / OS noise
+.idea/
+.vscode/
+.DS_Store
+
+# Tests — not needed at runtime
+tests/
+.phpunit.result.cache
+.phpunit.cache/
+
+# Docs
+*.md
+TASKS.md
+CLAUDE.md
+DEPLOY.md
+
+# Host-only nginx config — not needed inside the container
+nginx/host.conf
+
+# Laravel runtime dirs — Docker volumes handle these
+storage/logs/
+storage/framework/cache/
+storage/framework/sessions/
+storage/framework/views/
+bootstrap/cache/

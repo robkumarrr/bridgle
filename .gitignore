@@ -40,3 +40,5 @@ docker-compose.prod.yml
 /Bridgle/
 TASKS.md
 CLAUDE.md
+DEPLOY.md
+nginx/host.conf
