@@ -28,7 +28,8 @@ WORKDIR /var/www/html
 COPY . .
 
 # PHP dependencies — no dev packages in prod, pre-generate class map for faster autoloading
-RUN composer install --no-dev --optimize-autoloader
+# We pass a dummy APP_KEY here because Laravel's package:discover script will crash if it's completely missing during the build.
+RUN APP_KEY="AckfSECXIvnK5r28GVIWUAxmbBSjTsmF" composer install --no-dev --optimize-autoloader
 
 # Fix storage and cache permissions so php-fpm (running as www-data) can write to them
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
