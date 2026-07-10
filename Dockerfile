@@ -27,6 +27,10 @@ WORKDIR /var/www/html
 # Copy application source (respects .dockerignore — vendor/, node_modules/, .env excluded)
 COPY . .
 
+# Ensure required Laravel directories exist before composer install runs,
+# because Git does not track empty directories!
+RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
+
 # PHP dependencies — no dev packages in prod, pre-generate class map for faster autoloading
 # We pass a dummy APP_KEY here because Laravel's package:discover script will crash if it's completely missing during the build.
 RUN APP_KEY="AckfSECXIvnK5r28GVIWUAxmbBSjTsmF" composer install --no-dev --optimize-autoloader
