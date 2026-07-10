@@ -19,7 +19,8 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing" force="true"/>
-        <env name="APP_KEY" value="base64:y71p8YQ1bS9X2+ZzR4KjLm7gN5oP3qRtUwV2yH1+Z4s=" force="true"/>
+        <!-- A fake 32-character key for testing to avoid GitGuardian alerts -->
+        <env name="APP_KEY" value="AckfSECXIvnK5r28GVIWUAxmbBSjTsmF" force="true"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
