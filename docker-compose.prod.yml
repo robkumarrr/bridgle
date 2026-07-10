@@ -5,9 +5,7 @@ services:
   # Never exposed to the internet directly; nginx talks to it over FastCGI on
   # the internal bridgle-network.
   bridgle-app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/robkumarrr/bridgle-app:latest
     container_name: bridgle-app
     restart: unless-stopped
     volumes:
