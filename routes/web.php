@@ -19,13 +19,21 @@ RateLimiter::for('dictionary', function (Request $request) {
         ->by($request->user()?->id ?? $request->ip());
 });
 
+// Public so guests get definitions too — throttled per IP when there's no user.
+Route::get('dictionary/{word}', [DictionaryController::class, 'show'])
+    ->middleware('throttle:dictionary')
+    ->name('dictionary.show');
+
+// Guest mode — play without an account. Nothing is saved server-side (the game
+// lives in localStorage), and logged-in users get bounced to the dashboard.
+Route::inertia('play', 'Dashboard', ['guest' => true])
+    ->middleware('guest')
+    ->name('play');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'Dashboard')->name('dashboard');
     Route::post('game-results', [GameResultController::class, 'store'])->name('game-results.store');
     Route::get('stats', [GameResultController::class, 'stats'])->name('stats');
-    Route::get('dictionary/{word}', [DictionaryController::class, 'show'])
-        ->middleware('throttle:dictionary')
-        ->name('dictionary.show');
 
     // Active game persistence
     Route::get('active-game', [ActiveGameController::class, 'show'])->name('active-game.show');

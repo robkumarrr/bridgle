@@ -301,6 +301,87 @@ home.form = homeForm
 /**
 * @see \Inertia\Controller::__invoke
 * @see vendor/inertiajs/inertia-laravel/src/Controller.php:13
+* @route '/play'
+*/
+export const play = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: play.url(options),
+    method: 'get',
+})
+
+play.definition = {
+    methods: ["get","head"],
+    url: '/play',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \Inertia\Controller::__invoke
+* @see vendor/inertiajs/inertia-laravel/src/Controller.php:13
+* @route '/play'
+*/
+play.url = (options?: RouteQueryOptions) => {
+    return play.definition.url + queryParams(options)
+}
+
+/**
+* @see \Inertia\Controller::__invoke
+* @see vendor/inertiajs/inertia-laravel/src/Controller.php:13
+* @route '/play'
+*/
+play.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: play.url(options),
+    method: 'get',
+})
+
+/**
+* @see \Inertia\Controller::__invoke
+* @see vendor/inertiajs/inertia-laravel/src/Controller.php:13
+* @route '/play'
+*/
+play.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: play.url(options),
+    method: 'head',
+})
+
+/**
+* @see \Inertia\Controller::__invoke
+* @see vendor/inertiajs/inertia-laravel/src/Controller.php:13
+* @route '/play'
+*/
+const playForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: play.url(options),
+    method: 'get',
+})
+
+/**
+* @see \Inertia\Controller::__invoke
+* @see vendor/inertiajs/inertia-laravel/src/Controller.php:13
+* @route '/play'
+*/
+playForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: play.url(options),
+    method: 'get',
+})
+
+/**
+* @see \Inertia\Controller::__invoke
+* @see vendor/inertiajs/inertia-laravel/src/Controller.php:13
+* @route '/play'
+*/
+playForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: play.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+play.form = playForm
+
+/**
+* @see \Inertia\Controller::__invoke
+* @see vendor/inertiajs/inertia-laravel/src/Controller.php:13
 * @route '/dashboard'
 */
 export const dashboard = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -378,3 +459,84 @@ dashboardForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> =
 })
 
 dashboard.form = dashboardForm
+
+/**
+* @see \App\Http\Controllers\GameResultController::stats
+* @see app/Http/Controllers/GameResultController.php:37
+* @route '/stats'
+*/
+export const stats = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: stats.url(options),
+    method: 'get',
+})
+
+stats.definition = {
+    methods: ["get","head"],
+    url: '/stats',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\GameResultController::stats
+* @see app/Http/Controllers/GameResultController.php:37
+* @route '/stats'
+*/
+stats.url = (options?: RouteQueryOptions) => {
+    return stats.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\GameResultController::stats
+* @see app/Http/Controllers/GameResultController.php:37
+* @route '/stats'
+*/
+stats.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: stats.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\GameResultController::stats
+* @see app/Http/Controllers/GameResultController.php:37
+* @route '/stats'
+*/
+stats.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: stats.url(options),
+    method: 'head',
+})
+
+/**
+* @see \App\Http\Controllers\GameResultController::stats
+* @see app/Http/Controllers/GameResultController.php:37
+* @route '/stats'
+*/
+const statsForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: stats.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\GameResultController::stats
+* @see app/Http/Controllers/GameResultController.php:37
+* @route '/stats'
+*/
+statsForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: stats.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\GameResultController::stats
+* @see app/Http/Controllers/GameResultController.php:37
+* @route '/stats'
+*/
+statsForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: stats.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+stats.form = statsForm

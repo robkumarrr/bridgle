@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import UserMenuContent from '@/components/UserMenuContent.vue';
 import { getInitials } from '@/composables/useInitials';
-import { dashboard } from '@/routes';
+import { dashboard, home, login, register } from '@/routes';
 
 const page = usePage();
 const auth = computed(() => page.props.auth);
@@ -21,14 +21,24 @@ const auth = computed(() => page.props.auth);
 <template>
     <div class="border-b border-border/60">
         <div class="mx-auto flex h-14 max-w-3xl items-center justify-between px-4">
-            <Link :href="dashboard()">
+            <Link :href="auth.user ? dashboard() : home()">
                 <AppLogo />
             </Link>
 
             <div class="flex items-center gap-1">
                 <ThemeToggle />
 
-                <DropdownMenu>
+                <!-- Guest mode (/play) — no user to show, offer an account instead -->
+                <template v-if="!auth.user">
+                    <Link :href="login()">
+                        <Button variant="ghost" size="sm">Log in</Button>
+                    </Link>
+                    <Link :href="register()">
+                        <Button size="sm" class="bg-[#bcaae4] text-white hover:bg-[#a896d8]">Sign up</Button>
+                    </Link>
+                </template>
+
+                <DropdownMenu v-else>
                     <DropdownMenuTrigger :as-child="true">
                         <Button
                             variant="ghost"

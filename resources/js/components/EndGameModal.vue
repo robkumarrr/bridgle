@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { Link } from '@inertiajs/vue3';
 import { ref, watch, onMounted, onUnmounted } from 'vue';
 import { ChevronLeft, ChevronRight, X, Volume2, BarChart2, BookOpen } from 'lucide-vue-next';
+import { login, register } from '@/routes';
 
 // ─── Props / Emits ────────────────────────────────────────────────────────────
 
@@ -9,6 +11,7 @@ const props = defineProps<{
     word: string;
     gameState: 'won' | 'lost';
     attemptCount: number; // how many guesses it took
+    guest?: boolean;      // no account → no stats, show a sign-up nudge instead
 }>();
 
 const emit = defineEmits<{
@@ -36,7 +39,10 @@ watch(() => props.show, (val) => {
     if (val) {
         currentStep.value = 'definition';
         fetchDefinition();
-        fetchStats();
+
+        if (!props.guest) {
+            fetchStats();
+        }
     }
 });
 
@@ -242,7 +248,35 @@ function headline(): string {
 
                         <!-- ── Step 2: Stats ── -->
                         <div v-else-if="currentStep === 'stats'" key="stats" class="px-5 py-4">
-                            <div v-if="statsLoading" class="space-y-3 animate-pulse">
+                            <!-- Guests: nudge towards an account instead of stats -->
+                            <div v-if="guest" class="flex flex-col items-center text-center gap-4 py-8">
+                                <BarChart2 class="w-10 h-10 text-muted-foreground" />
+                                <div>
+                                    <p class="text-base font-semibold">Track your stats</p>
+                                    <p class="text-sm text-muted-foreground leading-relaxed mt-1 max-w-[28ch]">
+                                        Create a free account to keep your streaks, win rate and guess distribution.
+                                    </p>
+                                </div>
+                                <div class="flex flex-col gap-2 w-full max-w-[16rem]">
+                                    <Link
+                                        :href="register()"
+                                        class="py-2.5 rounded-lg bg-primary text-primary-foreground
+                                               font-semibold text-sm hover:opacity-90 active:scale-95
+                                               transition-all duration-150"
+                                    >
+                                        Create account
+                                    </Link>
+                                    <Link
+                                        :href="login()"
+                                        class="py-2.5 rounded-lg border border-border text-sm
+                                               font-medium hover:bg-accent transition-colors"
+                                    >
+                                        Log in
+                                    </Link>
+                                </div>
+                            </div>
+
+                            <div v-else-if="statsLoading" class="space-y-3 animate-pulse">
                                 <div class="h-3 bg-muted rounded w-full" />
                                 <div class="h-3 bg-muted rounded w-4/5" />
                                 <div class="h-3 bg-muted rounded w-full" />
