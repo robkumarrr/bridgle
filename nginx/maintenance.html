@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bridgle — back soon</title>
+    <style>
+        :root { color-scheme: light dark; --bg: #ffffff; --fg: #121213; --muted: #6b7280; --green: #6aaa64; --yellow: #c9b458; }
+        @media (prefers-color-scheme: dark) { :root { --bg: #121213; --fg: #f8f8f8; --muted: #9ca3af; --green: #538d4e; --yellow: #b59f3b; } }
+        * { box-sizing: border-box; margin: 0; }
+        body { min-height: 100dvh; display: grid; place-items: center; padding: 16px; background: var(--bg); color: var(--fg); font-family: system-ui, -apple-system, sans-serif; text-align: center; }
+        .tiles { display: flex; gap: 6px; justify-content: center; margin-bottom: 24px; }
+        .tile { width: 52px; height: 52px; display: grid; place-items: center; font-size: 28px; font-weight: 700; color: #fff; text-transform: uppercase; border-radius: 4px; }
+        .g { background: var(--green); } .y { background: var(--yellow); }
+        h1 { font-size: 1.25rem; margin-bottom: 8px; }
+        p { color: var(--muted); max-width: 32ch; margin: 0 auto; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="tiles" aria-hidden="true">
+            <div class="tile g">B</div><div class="tile y">R</div><div class="tile g">B</div>
+        </div>
+        <h1>Bridgle is down for a quick security update</h1>
+        <p>We'll be back shortly. Your stats and streaks are safe.</p>
+    </main>
+</body>
+</html>

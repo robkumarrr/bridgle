@@ -43,6 +43,10 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
 # This is what nginx will serve as static assets
 RUN pnpm install --frozen-lockfile && pnpm run build
 
+# Runtime hardening — added after composer/pnpm so the build itself isn't restricted
+COPY docker/php/zz-hardening.ini /usr/local/etc/php/conf.d/zz-hardening.ini
+COPY docker/php/zz-hardening.conf /usr/local/etc/php-fpm.d/zz-hardening.conf
+
 # Expose FastCGI port (only reachable within the Docker network — never published to the host)
 EXPOSE 9000
 

@@ -16,6 +16,20 @@ services:
       # Persist logs so they survive container restarts and image rebuilds.
       - storage_logs:/var/www/html/storage/logs
     env_file: .env.production
+    # Hardening — limits what an attacker can do if PHP itself is exploited.
+    # Read-only root FS means no dropping webshells into the app code; only the
+    # volumes above and /tmp are writable. The FPM master only needs SETUID/SETGID
+    # to drop its workers to www-data, so every other capability is stripped.
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETUID
+      - SETGID
     networks:
       - bridgle-network
       - web-proxy # Connect to web-proxy to reach the global-db
@@ -35,6 +49,11 @@ services:
       # Read-only mount of the shared built assets volume.
       # On first boot, Docker populates this from the app image's public/build/.
       - public_build:/var/www/html/public/build:ro
+      # Shown whenever PHP is unreachable — including on purpose, via
+      # `docker compose -f docker-compose.prod.yml stop bridgle-app`.
+      - ./nginx/maintenance.html:/usr/share/nginx/html/maintenance.html:ro
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       - bridgle-app
     networks:
