@@ -1,4 +1,6 @@
-FROM php:8.4-fpm
+# Pinned to an exact patch release: the build fails loudly if the image isn't
+# published yet, instead of silently shipping an older, vulnerable PHP.
+FROM php:8.4.27-fpm
 
 # System deps for Postgres, zip, and git (composer needs git for some packages)
 RUN apt-get update && apt-get install -y \
