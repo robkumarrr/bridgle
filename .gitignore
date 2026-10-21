@@ -42,3 +42,6 @@ TASKS.md
 CLAUDE.md
 DEPLOY.md
 nginx/host.conf
+
+# Maintenance flag (touch maintenance/on on the server)
+/maintenance/

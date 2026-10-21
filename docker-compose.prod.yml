@@ -52,6 +52,8 @@ services:
       # Shown whenever PHP is unreachable — including on purpose, via
       # `docker compose -f docker-compose.prod.yml stop bridgle-app`.
       - ./nginx/maintenance.html:/usr/share/nginx/html/maintenance.html:ro
+      # `touch maintenance/on` → 503 page even while PHP is up (see nginx.conf).
+      - ./maintenance:/etc/nginx/maintenance:ro
     security_opt:
       - no-new-privileges:true
     depends_on:
