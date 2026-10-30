@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Maintenance switch for bridgle (run on the droplet, from anywhere):
+#
+#   ./bin/maint on       visitors get the "BRB" page
+#   ./bin/maint off      site is live
+#   ./bin/maint          show which one it is
+#
+# nginx checks for maintenance/on on every request (see nginx/nginx.conf),
+# so nothing needs restarting. PHP keeps running either way.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+flag=maintenance/on
+
+case "${1:-status}" in
+    on)
+        mkdir -p maintenance
+        touch "$flag"
+        echo "🔧 Maintenance ON — visitors see the BRB page."
+        ;;
+    off)
+        rm -f "$flag"
+        echo "✅ Maintenance OFF — bridgle is live."
+        ;;
+    status)
+        if [[ -f $flag ]]; then
+            echo "🔧 Maintenance is ON."
+        else
+            echo "✅ Live (maintenance is OFF)."
+        fi
+        ;;
+    *)
+        echo "usage: $0 [on|off|status]" >&2
+        exit 1
+        ;;
+esac

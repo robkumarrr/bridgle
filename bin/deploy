@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Deploy the latest bridgle image on the droplet (run from anywhere):
+#
+#   ./bin/deploy
+#
+# Wait for the "Build and Push Docker Image" GitHub Action to go green first —
+# this pulls whatever image it last pushed.
+set -euo pipefail
+
+image=ghcr.io/robkumarrr/bridgle-app:latest
+build_dir=/var/www/html/public/build
+
+step() { printf '\n\033[1;35m==> %s\033[0m\n' "$1"; }
+
+# Everything lives in main() so bash reads the whole script before running it —
+# `git pull` below may update this very file mid-run.
+main() {
+    cd "$(dirname "$0")/.."
+    local compose=(docker compose --env-file .env.production -f docker-compose.prod.yml)
+
+    step "Pulling config (compose file, nginx.conf, scripts) from git"
+    git pull --ff-only
+
+    step "Pulling the new app image"
+    "${compose[@]}" pull bridgle-app
+
+    step "Copying the new frontend (JS/CSS) into the shared volume"
+    # Docker only fills a named volume from the image the first time it's
+    # created, so new builds never reach public_build on their own. Copy them
+    # in. Old files stay, so anyone mid-game keeps working until they refresh.
+    local volume
+    volume=$(docker inspect bridgle-app \
+        --format '{{range .Mounts}}{{if eq .Destination "'"$build_dir"'"}}{{.Name}}{{end}}{{end}}')
+    if [[ -z $volume ]]; then
+        echo "Couldn't find the public_build volume on bridgle-app — is it running?" >&2
+        exit 1
+    fi
+    docker run --rm --entrypoint sh -v "$volume:/dest" "$image" \
+        -c "cp -a $build_dir/. /dest/"
+
+    step "Restarting with the new image"
+    "${compose[@]}" up -d
+    # nginx looks up bridgle-app's address once at boot; restart it so it
+    # never points at the old container.
+    "${compose[@]}" restart bridgle-nginx
+
+    step "Running database migrations"
+    "${compose[@]}" exec -T bridgle-app php artisan migrate --force
+
+    step "Smoke test"
+    docker exec bridgle-app php -v | head -1
+    # Requests from inside nginx skip maintenance mode, so this tests the real
+    # app even while the BRB page is up.
+    docker exec bridgle-nginx wget -qO /dev/null -S http://127.0.0.1/ 2>&1 | grep 'HTTP/'
+    ./bin/maint
+
+    step "Cleaning up old images"
+    docker image prune -f
+
+    printf '\n✅ Deployed.\n'
+}
+
+main "$@"
