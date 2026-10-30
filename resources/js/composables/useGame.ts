@@ -70,9 +70,12 @@ function getCsrf(): string {
     return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 }
 
+// Guest games live in the browser only — no account, no server persistence
+export const GUEST_STORAGE_KEY = 'bridgle:guest-game';
+
 // ─── Composable ───────────────────────────────────────────────────────────────
 
-export function useGame() {
+export function useGame({ guest = false }: { guest?: boolean } = {}) {
     const answer = ref<string>(pickRandom());  // overridden by initGame() on mount
 
     const board = ref<Tile[][]>(emptyBoard());
@@ -167,8 +170,27 @@ export function useGame() {
     // ── Persistence ───────────────────────────────────────────────────────────
 
     async function saveGame() {
+        const snapshot = JSON.stringify({
+            word: answer.value,
+            board: board.value,
+            current_row: currentRow.value,
+            game_state: gameState.value,
+            letter_states: letterStates.value,
+            game_start_time: gameStartTime.value,
+            guess_times: guessTimes.value,
+            guesses: submittedGuesses.value,
+            invalid_guess_count: invalidGuessCount.value,
+            letter_frequency: letterFrequency.value,
+            last_result: lastResult.value,
+        });
+
         // Fire-and-forget — we never block the UI on a save
         try {
+            if (guest) {
+                localStorage.setItem(GUEST_STORAGE_KEY, snapshot);
+
+                return;
+            }
             await fetch('/active-game', {
                 method: 'PUT',
                 headers: {
@@ -176,27 +198,20 @@ export function useGame() {
                     'X-CSRF-TOKEN': getCsrf(),
                     'X-Requested-With': 'XMLHttpRequest',
                 },
-                body: JSON.stringify({
-                    word: answer.value,
-                    board: board.value,
-                    current_row: currentRow.value,
-                    game_state: gameState.value,
-                    letter_states: letterStates.value,
-                    game_start_time: gameStartTime.value,
-                    guess_times: guessTimes.value,
-                    guesses: submittedGuesses.value,
-                    invalid_guess_count: invalidGuessCount.value,
-                    letter_frequency: letterFrequency.value,
-                    last_result: lastResult.value,
-                }),
+                body: snapshot,
             });
         } catch {
-            // Silent — offline/flaky network shouldn't break the game
+            // Silent — offline/flaky network (or blocked storage) shouldn't break the game
         }
     }
 
     async function clearSavedGame() {
         try {
+            if (guest) {
+                localStorage.removeItem(GUEST_STORAGE_KEY);
+
+                return;
+            }
             await fetch('/active-game', {
                 method: 'DELETE',
                 headers: {
@@ -210,21 +225,26 @@ export function useGame() {
     }
 
     /**
-     * Load any saved game from the API. If none exists, start a fresh game
-     * and immediately persist it so the word is locked to the DB.
+     * Load any saved game from the API (or localStorage for guests). If none
+     * exists, start a fresh game and immediately persist it so the word is locked in.
      * Call this once from Dashboard's onMounted.
      */
     async function initGame() {
         initialising.value = true;
         try {
-            const res = await fetch('/active-game', {
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-            });
+            let saved;
 
-            const saved = await res.json();
+            if (guest) {
+                saved = JSON.parse(localStorage.getItem(GUEST_STORAGE_KEY) ?? 'null');
+            } else {
+                const res = await fetch('/active-game', {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                saved = await res.json();
+            }
 
             if (saved && saved.word) {
                 // Hydrate all state from the saved game.

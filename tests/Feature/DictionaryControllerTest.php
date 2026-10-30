@@ -18,9 +18,11 @@ class DictionaryControllerTest extends TestCase
         });
     }
 
-    public function test_unauthenticated_request_is_redirected(): void
+    public function test_guests_can_look_up_definitions(): void
     {
-        $this->getJson('/dictionary/crane')->assertUnauthorized();
+        $this->mockDictionary(['word' => 'crane', 'meanings' => []]);
+
+        $this->getJson('/dictionary/crane')->assertOk()->assertJsonPath('word', 'crane');
     }
 
     public function test_word_with_non_alpha_characters_returns_422(): void

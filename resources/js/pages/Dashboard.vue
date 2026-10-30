@@ -8,6 +8,9 @@ import GameKeyboard from '@/components/GameKeyboard.vue';
 import { useGame } from '@/composables/useGame';
 import type { GameResultPayload } from '@/composables/useGame';
 
+// Guest mode (served from /play): same game, but nothing is saved server-side
+const props = withDefaults(defineProps<{ guest?: boolean }>(), { guest: false });
+
 const {
     board,
     boardKey,
@@ -24,7 +27,7 @@ const {
     submitGuess,
     newGame,
     initGame,
-} = useGame();
+} = useGame({ guest: props.guest });
 
 // ── Load / restore saved game on mount ────────────────────────────────────────
 onMounted(() => initGame());
@@ -83,7 +86,7 @@ function getCsrf(): string {
 }
 
 watch(lastResult, async (result: GameResultPayload | null) => {
-    if (!result) {
+    if (!result || props.guest) {
 return;
 }
 
@@ -167,6 +170,7 @@ return;
             :word="lastResult.word"
             :game-state="gameState as 'won' | 'lost'"
             :attempt-count="currentRow"
+            :guest="guest"
             @close="modalOpen = false"
             @play-again="requestNewGame"
         />

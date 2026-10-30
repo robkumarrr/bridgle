@@ -3,7 +3,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import BridgleLogo from '@/components/BridgleLogo.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
 import { Button } from '@/components/ui/button';
-import { dashboard, login, register } from '@/routes';
+import { dashboard, login, play, register } from '@/routes';
 
 withDefaults(
     defineProps<{
@@ -49,6 +49,14 @@ withDefaults(
                     </Link>
                 </template>
             </div>
+
+            <Link
+                v-if="!$page.props.auth.user"
+                :href="play()"
+                class="-mt-6 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
+                or play as a guest →
+            </Link>
         </div>
     </div>
 </template>
