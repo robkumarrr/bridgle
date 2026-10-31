@@ -156,8 +156,21 @@ function keyClass(key: string): string {
   background-color: hsl(49 84% 38%);
 }
 
+/* Dark mode: unused keys are the lighter ones, letters ruled out fade back
+   so what's still in play stands out. */
+.dark .key--default,
+.dark .key--wide {
+  background-color: hsl(240 2% 40%);
+  color: #fff;
+}
+
+.dark .key--default:hover {
+  background-color: hsl(240 2% 46%);
+}
+
 .dark .key--absent {
-  background-color: hsl(240 2% 34%);
+  background-color: hsl(240 3% 15%);
+  color: hsl(0 0% 100% / 0.45);
 }
 
 /* Mobile tweaks */
