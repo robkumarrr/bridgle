@@ -32,7 +32,7 @@ services:
       - SETGID
     networks:
       - bridgle-network
-      - web-proxy # Connect to web-proxy to reach the global-db
+      - database # Reach global-db. Not on web-proxy: only nginx needs the public proxy.
 
   # ── nginx web server ───────────────────────────────────────────────────────
   # The only container that faces the internet (port 80).
@@ -66,6 +66,9 @@ networks:
   bridgle-network:
     name: bridgle-network
   web-proxy:
+    external: true
+  # Created by rk-droplet-config; shared with global-db.
+  database:
     external: true
 
 volumes:
