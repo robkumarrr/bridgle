@@ -28,7 +28,7 @@ const auth = computed(() => page.props.auth);
             <div class="flex items-center gap-1">
                 <ThemeToggle />
 
-                <!-- Guest mode (/play) — no user to show, offer an account instead -->
+                <!-- Guest mode — no user to show, offer an account instead -->
                 <template v-if="!auth.user">
                     <Link :href="login()">
                         <Button variant="ghost" size="sm">Log in</Button>

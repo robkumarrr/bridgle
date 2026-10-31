@@ -8,7 +8,7 @@ import GameKeyboard from '@/components/GameKeyboard.vue';
 import { useGame } from '@/composables/useGame';
 import type { GameResultPayload } from '@/composables/useGame';
 
-// Guest mode (served from /play): same game, but nothing is saved server-side
+// Guest mode (served from /): same game, but nothing is saved server-side
 const props = withDefaults(defineProps<{ guest?: boolean }>(), { guest: false });
 
 const {

@@ -6,11 +6,16 @@ use App\Http\Controllers\GameResultController;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
-use Laravel\Fortify\Features;
 
-Route::inertia('/', 'Welcome', [
-    'canRegister' => Features::enabled(Features::registration()),
-])->name('home');
+// The front page is the game. Guests play straight away (nothing is saved
+// server-side, the game lives in localStorage); logged-in users get bounced
+// to their dashboard.
+Route::inertia('/', 'Dashboard', ['guest' => true])
+    ->middleware('guest')
+    ->name('home');
+
+// Old guest-mode link, kept so shared /play links still work.
+Route::permanentRedirect('play', '/')->name('play');
 
 // Rate limiter: max 30 dictionary lookups per user per hour.
 // Since results are cached forever, this only matters on cache misses (new words).
@@ -23,12 +28,6 @@ RateLimiter::for('dictionary', function (Request $request) {
 Route::get('dictionary/{word}', [DictionaryController::class, 'show'])
     ->middleware('throttle:dictionary')
     ->name('dictionary.show');
-
-// Guest mode — play without an account. Nothing is saved server-side (the game
-// lives in localStorage), and logged-in users get bounced to the dashboard.
-Route::inertia('play', 'Dashboard', ['guest' => true])
-    ->middleware('guest')
-    ->name('play');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'Dashboard')->name('dashboard');
