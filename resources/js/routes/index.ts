@@ -299,8 +299,8 @@ homeForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
 home.form = homeForm
 
 /**
-* @see \Inertia\Controller::__invoke
-* @see vendor/inertiajs/inertia-laravel/src/Controller.php:13
+* @see \Illuminate\Routing\RedirectController::__invoke
+* @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
 * @route '/play'
 */
 export const play = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -309,13 +309,13 @@ export const play = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 
 play.definition = {
-    methods: ["get","head"],
+    methods: ["get","head","post","put","patch","delete","options"],
     url: '/play',
-} satisfies RouteDefinition<["get","head"]>
+} satisfies RouteDefinition<["get","head","post","put","patch","delete","options"]>
 
 /**
-* @see \Inertia\Controller::__invoke
-* @see vendor/inertiajs/inertia-laravel/src/Controller.php:13
+* @see \Illuminate\Routing\RedirectController::__invoke
+* @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
 * @route '/play'
 */
 play.url = (options?: RouteQueryOptions) => {
@@ -323,8 +323,8 @@ play.url = (options?: RouteQueryOptions) => {
 }
 
 /**
-* @see \Inertia\Controller::__invoke
-* @see vendor/inertiajs/inertia-laravel/src/Controller.php:13
+* @see \Illuminate\Routing\RedirectController::__invoke
+* @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
 * @route '/play'
 */
 play.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -333,8 +333,8 @@ play.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 
 /**
-* @see \Inertia\Controller::__invoke
-* @see vendor/inertiajs/inertia-laravel/src/Controller.php:13
+* @see \Illuminate\Routing\RedirectController::__invoke
+* @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
 * @route '/play'
 */
 play.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -343,8 +343,58 @@ play.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
 /**
-* @see \Inertia\Controller::__invoke
-* @see vendor/inertiajs/inertia-laravel/src/Controller.php:13
+* @see \Illuminate\Routing\RedirectController::__invoke
+* @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+* @route '/play'
+*/
+play.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: play.url(options),
+    method: 'post',
+})
+
+/**
+* @see \Illuminate\Routing\RedirectController::__invoke
+* @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+* @route '/play'
+*/
+play.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+    url: play.url(options),
+    method: 'put',
+})
+
+/**
+* @see \Illuminate\Routing\RedirectController::__invoke
+* @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+* @route '/play'
+*/
+play.patch = (options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+    url: play.url(options),
+    method: 'patch',
+})
+
+/**
+* @see \Illuminate\Routing\RedirectController::__invoke
+* @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+* @route '/play'
+*/
+play.delete = (options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+    url: play.url(options),
+    method: 'delete',
+})
+
+/**
+* @see \Illuminate\Routing\RedirectController::__invoke
+* @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+* @route '/play'
+*/
+play.options = (options?: RouteQueryOptions): RouteDefinition<'options'> => ({
+    url: play.url(options),
+    method: 'options',
+})
+
+/**
+* @see \Illuminate\Routing\RedirectController::__invoke
+* @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
 * @route '/play'
 */
 const playForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -353,8 +403,8 @@ const playForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
 })
 
 /**
-* @see \Inertia\Controller::__invoke
-* @see vendor/inertiajs/inertia-laravel/src/Controller.php:13
+* @see \Illuminate\Routing\RedirectController::__invoke
+* @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
 * @route '/play'
 */
 playForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -363,14 +413,84 @@ playForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
 })
 
 /**
-* @see \Inertia\Controller::__invoke
-* @see vendor/inertiajs/inertia-laravel/src/Controller.php:13
+* @see \Illuminate\Routing\RedirectController::__invoke
+* @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
 * @route '/play'
 */
 playForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
     action: play.url({
         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
             _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+/**
+* @see \Illuminate\Routing\RedirectController::__invoke
+* @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+* @route '/play'
+*/
+playForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: play.url(options),
+    method: 'post',
+})
+
+/**
+* @see \Illuminate\Routing\RedirectController::__invoke
+* @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+* @route '/play'
+*/
+playForm.put = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: play.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'PUT',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+/**
+* @see \Illuminate\Routing\RedirectController::__invoke
+* @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+* @route '/play'
+*/
+playForm.patch = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: play.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'PATCH',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+/**
+* @see \Illuminate\Routing\RedirectController::__invoke
+* @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+* @route '/play'
+*/
+playForm.delete = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: play.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'DELETE',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+/**
+* @see \Illuminate\Routing\RedirectController::__invoke
+* @see vendor/laravel/framework/src/Illuminate/Routing/RedirectController.php:19
+* @route '/play'
+*/
+playForm.options = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: play.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'OPTIONS',
             ...(options?.query ?? options?.mergeQuery ?? {}),
         }
     }),
