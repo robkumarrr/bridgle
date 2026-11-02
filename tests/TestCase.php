@@ -24,6 +24,18 @@ abstract class TestCase extends BaseTestCase
         return parent::createApplication();
     }
 
+    /**
+     * Feature tests render the Inertia root view, whose @vite tag needs either
+     * a running dev server (public/hot) or built assets (public/build). CI has
+     * neither, and tests don't need real assets, so stub Vite out.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->withoutVite();
+    }
+
     protected function skipUnlessFortifyHas(string $feature, ?string $message = null): void
     {
         if (! Features::enabled($feature)) {
