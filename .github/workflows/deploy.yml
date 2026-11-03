@@ -1,11 +1,21 @@
-name: Build and Push Docker Image
+name: Deploy
 
 on:
   push:
     branches: ['main']
 
+# One deploy at a time; a newer push waits for the running one instead of cancelling it.
+concurrency:
+  group: production
+  cancel-in-progress: false
+
 jobs:
+  # Same tests as CI. Nothing is built or deployed unless they pass.
+  test:
+    uses: ./.github/workflows/ci.yml
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -27,4 +37,27 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/robkumarrr/bridgle-app:latest
+          # :latest is what the droplet runs; sha-<commit> keeps every build for rollbacks.
+          tags: |
+            ghcr.io/robkumarrr/bridgle-app:latest
+            ghcr.io/robkumarrr/bridgle-app:sha-${{ github.sha }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    # The DEPLOY_SSH_KEY secret lives in this environment, which only main can use.
+    environment: production
+
+    steps:
+      # The deploy user's key can only run /usr/local/sbin/deploy-bridgle
+      # (see rk-droplet-config), so this ssh call has no command of its own.
+      - name: Deploy to the droplet
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # The droplet's host key, so a server pretending to be it is refused.
+          echo '138.197.148.106 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIODns+mwYrdRt3ipnOQDEzHigA1Gdj848XzC8S0EVjLs' > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes deploy@138.197.148.106

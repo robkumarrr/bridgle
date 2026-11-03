@@ -2,9 +2,11 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    # main is tested by deploy.yml, which calls this workflow before building.
+    branches-ignore: ["main"]
   pull_request:
     branches: ["**"]
+  workflow_call:
 
 jobs:
   test:
