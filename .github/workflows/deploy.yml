@@ -41,6 +41,10 @@ jobs:
           tags: |
             ghcr.io/robkumarrr/bridgle-app:latest
             ghcr.io/robkumarrr/bridgle-app:sha-${{ github.sha }}
+          # Lets composer install download from GitHub logged in; anonymous downloads
+          # from Actions runners get throttled (HTTP 504). Not stored in the image.
+          secrets: |
+            composer_auth={"github-oauth":{"github.com":"${{ secrets.GITHUB_TOKEN }}"}}
 
   deploy:
     needs: build
