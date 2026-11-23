@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Pinned to an exact patch release: the build fails loudly if the image isn't
 # published yet, instead of silently shipping an older, vulnerable PHP.
 FROM php:8.4.28-fpm
@@ -34,8 +35,12 @@ COPY . .
 RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
 
 # PHP dependencies — no dev packages in prod, pre-generate class map for faster autoloading
-# We pass a dummy APP_KEY here because Laravel's package:discover script will crash if it's completely missing during the build.
-RUN APP_KEY="AckfSECXIvnK5r28GVIWUAxmbBSjTsmF" composer install --no-dev --optimize-autoloader
+# package:discover crashes without an APP_KEY, so the build uses a random throwaway one;
+# the real key comes from .env.production at runtime.
+# COMPOSER_AUTH (GitHub token from the workflow) is a build secret: Composer downloads as a
+# logged-in user, which GitHub doesn't throttle, and the token never lands in an image layer.
+RUN --mount=type=secret,id=composer_auth,env=COMPOSER_AUTH \
+    APP_KEY="base64:$(head -c 32 /dev/urandom | base64)" composer install --no-dev --optimize-autoloader
 
 # Fix storage and cache permissions so php-fpm (running as www-data) can write to them
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
